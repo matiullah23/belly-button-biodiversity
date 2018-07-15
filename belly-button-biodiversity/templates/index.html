@@ -1,52 +1,200 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta http-equiv="X-UA-Compatible" content="ie=edge">
-    <link rel="stylesheet" href="static/style.css">
-    <title>Belly Button Biodiversity</title>
-    <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta http-equiv="X-UA-Compatible" content="ie=edge">
+  <title>Belly Button Biodiversity</title>
+  <link rel="stylesheet" href="static/css/style.css">
+  <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap.min.css">
+  <link href="https://fonts.googleapis.com/css?family=Raleway:400,700" rel="stylesheet">
+
+
 
 </head>
+
 <body>
-  <div class="container">
-    <div class="jumbotron">
-      <h1 class="display-4">Belly Button Biodiversity </br>Dashboard</h1>
-      <p class="lead">Use the interactive charts below to explore the dataset.</p>
-      <hr class="my-4">
-      <p>Belly Button Biodiversity.</p>
-      <p class="lead">
-        <a class="btn btn-primary btn-lg" href="#" role="button">Learn more</a>
-      </p>
+
+  <div class="container-fluid">
+    <div class="row">
+      <div class="col-md-12">
+        <div class="jumbotron text-center jumbotron-margin">
+          <h1>Belly Button Biodiversity Dashboard</h1>
+        </div>
+      </div>
+    </div>
+    <div class="row intro">
+      <div class="col-md-12">
+        <h3>Use the interactive charts below to explore the dataset</h3>
+      </div>
+    </div>
+    <div class="row row__chart-spacing">
+      <div class="col-md-4">
+        <div class="well">
+          <h5>SELECT Sample:</h5>
+          <select id="selDataset" onchange="optionChanged(this.value)"></select>
+        </div>
+        <div class="panel panel-primary">
+          <div class="panel-heading">
+            <h3 class="panel-title">Sample MetaData</h3>
+          </div>
+          <div id="sample-metadata" class="panel-body"></div>
+        </div>
+      </div>
+      <div class="col-md-8">
+        <div id="pie" class="shadow"></div>
+      </div>
+    </div>
+    <div class="row row__chart-spacing">
+      <div class="col-md-12">
+        <div id="bubble" class="shadow"></div>
+      </div>
     </div>
   </div>
-  <!-- <div class= "container2">
-    <div class= "row">
-
-    </div>
-  </div> -->
 
 
 
 
-<div class="container" id="container2">
-  <select id="selDataset" onchange="getData(this.value)">
-    <option value="emoji_char">Emoji Char</option>
-    <option value="emoji_id">Emoji ID</option>
-    <option value="emoji_name">Emoji Name</option>
-  </select>
-  <!-- insert pie charts here and that spedometer -->
-</div>
+  <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
 
-<div class="container" id="container3">
+  <script>
+    function updateMetaData(data) {
+      var panel = document.getElementById("sample-metadata");
+      panel.innerHTML = '';
 
-</div>
+      for (var key in data) {
+        var h6tag = document.createElement("h6");
+        var h6Text = document.createTextNode(`${key}: ${data[key]}`);
+        h6tag.append(h6Text);
+        panel.appendChild(h6tag);
+
+      }
+    };
+    //   })
+    // }
+    function buildCharts(sampleData, otuData) {
+
+      var labels = sampleData[0]['otu_ids'].map(function(item) {
+        return otuData[item]
+      });
+
+      var bubbleLayout = {
+        xaxis: {
+          title: 'OTU ID'
+        },
+        margin: {
+          t: 0
+        },
+        hovermode: 'closest',
+      };
+      var bubbleData = [{
+        x: sampleData[0]['otu_ids'],
+        y: sampleData[0]['sample_values'],
+        text: labels,
+        mode: 'markers',
+        marker: {
+          size: sampleData[0]['otu_ids'],
+          color: sampleData[0]['otu_ids'],
+          colorscale: "Earth",
+
+        }
+      }];
+
+      var bubble = document.getElementById('bubble');
+      Plotly.plot(bubble, bubbleData, bubbleLayout);
+
+      var pieData = [{
+        values: sampleData[0]['sample_values'].slice(0, 10),
+        labels: sampleData[0]['otu_ids'].slice(0, 10),
+        hovertext: labels.slice(0, 10),
+        hoverinfo: 'hovertext',
+        type: 'pie'
+      }];
+
+      var pieLayout = {
+        margin: {
+          t: 0,
+          l: 0
+        }
+      };
+
+      var pie = document.getElementById('pie');
+      Plotly.plot(pie, pieData, pieLayout);
+
+    };
 
 
+    function updateCharts(sampleData, otuData) {
 
+      var sampleValues = sampleData[0]['sample_values'];
+      var otuIds = sampleData[0]['otu_ids'];
+
+      var labels = otuIds.map(function(item) {
+        return otuData[item]
+      });
+
+      var bubble = document.getElementById('bubble');
+      Plotly.restyle(bubble, 'x', [otuIds]);
+      Plotly.restyle(bubble, 'y', [sampleValues]);
+      Plotly.restyle(bubble, 'text', [labels]);
+      Plotly.restyle(bubble, 'marker.size', [sampleValues]);
+      Plotly.restyle(bubble, 'marker.color', [otuIds]);
+
+      var pie = document.getElementById('pie');
+      var pieUpdate = {
+        values: [sampleValues.slice(0, 10)],
+        labels: [otuIds.slice(0, 10)],
+        hovertext: [labels.slice(0, 10)],
+        hoverinfo: 'hovertext',
+        type: 'pie'
+      };
+      Plotly.restyle(pie, pieUpdate);
+    };
+
+
+    function getData(sample, callback) {
+      Plotly.d3.json(`/samples/${sample}`, function(error, sampleData) {
+        if (error) return console.warn(error);
+        Plotly.d3.json('/otu', function(error, otuData) {
+          if (error) return console.warn(error);
+          callback(sampleData, otuData);
+        });
+      });
+      Plotly.d3.json(`/metadata/${sample}`, function(error, metaData) {
+        if (error) return console.warn(error);
+        updateMetaData(metaData);
+      })
+    }
+
+
+    function getOptions() {
+      var selector = document.getElementById('selDataset');
+      Plotly.d3.json('/names', function(error, sampleNames) {
+        for (var i = 0; i < sampleNames.length; i++) {
+          var currentOption = document.createElement('option');
+          currentOption.text = sampleNames[i];
+          currentOption.text = sampleNames[i]
+          selector.appendChild(currentOption);
+        }
+        getData(sampleNames[0], buildCharts);
+      })
+    }
+
+
+    function optionChanged(newSample) {
+      getData(newSample, updateCharts);
+    }
+
+
+    function init() {
+      getOptions();
+    }
+    init();
+  </script>
 
 
 
 </body>
+
 </html>
